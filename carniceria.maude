@@ -1,0 +1,458 @@
+***(
+    Práctica 4: Distribuciones alimentarias - Parejas
+    Asigntaura: Auditoría, Calidad y Fiabilidad Informáticas
+    Autores: Alberto Gutierrez Gallego y Daniel Parra Rodríguez
+
+)
+load model-checker.maude
+fmod CONJUNTO is 
+pr NAT .
+
+sort Conjunto .
+subsort Nat  < Conjunto .
+
+
+ op lv : -> Conjunto [ctor] .
+ op _;_ : Conjunto Conjunto -> Conjunto [ctor assoc comm id: lv] .
+
+endfm
+
+***Modulo Pedidos --------------------------------------------------------------------
+fmod PEDIDOS is
+pr NAT .
+
+sorts Pedido Pedidos .
+subsort Pedido < Pedidos .
+op pedidov : -> Pedido [ctor] .
+***idcarni cantidadvac cantidadcerdo
+op ___ : Nat Nat Nat -> Pedido [ctor] .
+op __ : Pedidos Pedidos -> Pedidos [ctor assoc comm id: pedidov ]  .
+endfm
+
+***Modulo furgoneta--------------------------------------------------------------------
+fmod FURGONETA is
+pr NAT .
+pr STRING .
+sort Furgoneta .
+
+op fv : -> Furgoneta [ctor] .
+***idG idC | CaVac CaCer|Estado
+op __|__|_ : Nat Nat Nat Nat String -> Furgoneta [ctor ].
+
+endfm
+
+***Modulo Granja--------------------------------------------------------------------
+fmod GRANJAS is 
+pr FURGONETA .
+pr PEDIDOS .
+
+sorts Granja Granjas .
+subsort Granja < Granjas .
+
+vars idg gc gv idf fva fc idcar idcarant pv pc  : Nat .
+var ped : Pedidos .
+var granjita : Granjas .
+var estadof : String .
+
+op gvacia : -> Granja [ctor] .
+***idGranja Furgoneta Pedidos | Cerdos Vacas
+
+op [___|__] : Nat Furgoneta Pedidos Nat Nat -> Granja [ctor] .
+op _\_ : Granjas Granjas -> Granjas [ctor assoc comm id: gvacia ] .
+op cargarfurgo : Granjas -> Granjas .
+
+eq cargarfurgo([ idg ( idg idcarant | fva fc | estadof) ( ( idcar pv pc ) ( ped ) ) | gc gv ]  )
+     = [ idg ( idg idcar | ( fva + pv )  ( fc + pc ) | "REPARTO" ) ( ped ) | sd( gc, pc ) sd( gv, pv ) ]  .
+
+op estadofurgo : Granjas -> Bool .
+
+eq estadofurgo([ idg ( idg idcar | fva fc | estadof) ( ( ped ) ) | gc gv ] \ granjita )
+    = estadof == "REPARTO" .
+
+endfm
+
+***Cliente--------------------------------------------------------------------
+fmod CLIENTES is
+pr NAT .
+
+sorts Cliente Clientes .
+subsort Cliente < Clientes .
+
+op cliv : -> Clientes [ctor] .
+***vac cer
+op _-_ : Nat Nat ->  Cliente [ctor] .
+op _//_ : Clientes Clientes ->  Clientes [ctor assoc id: cliv] .
+endfm
+
+
+***Carnicerias--------------------------------------------------------------------
+fmod CARNICERIAS is
+pr FURGONETA .
+pr CLIENTES .
+pr CONJUNTO .
+
+sorts Carniceria Carnicerias  .
+subsort Carniceria < Carnicerias .
+vars  caVac caCer : Nat .
+var estado : Bool .
+var clientes : Clientes .
+var furgo : Furgoneta .
+var libreta : Conjunto .
+var estadof : String .
+vars idg gc gv idf fva fc idcar pv pc  : Nat .
+
+op carv : -> Carniceria [ctor] .
+***idC Estado CaVac CaCer ListaClientes Furgoneta ListaIDGranjas
+op [__/__/___] : Nat Bool Nat Nat Clientes Furgoneta Conjunto -> Carniceria [ctor] .
+op _|_ : Carnicerias Carnicerias -> Carnicerias [ctor comm assoc id: carv ] .
+op espacio : Carniceria -> Bool .
+
+eq espacio([ idcar estado / caVac caCer / clientes furgo libreta ]) = (furgo == fv) .
+op suministrar : Carnicerias  -> Carnicerias .
+eq suministrar( [ idcar estado /  caVac  caCer / clientes (idg idcar | fva fc | estadof)  (idg ; libreta ) ])
+    = [ idcar estado / (caVac + fva) (caCer + fc) / clientes (idg idcar | 0 0 | "VUELTA") libreta ] .
+
+op estadoVuelta : Carnicerias -> Bool .
+eq estadoVuelta ( [ idcar estado / caVac caCer / clientes ( idg idcar | fva fc | estadof )  libreta ] ) = ( estadof == "VUELTA" ) .
+
+endfm
+
+***carrilessssssssssssssssssss
+fmod CARRIL is
+pr FURGONETA .
+sort Carril .
+subsort Furgoneta < Carril .
+
+op cv : -> Carril [ctor] .
+op _/_ : Carril Carril -> Carril [ctor assoc id: cv] .
+endfm
+
+
+
+
+***Carreteras --------------------------------------------------------------------
+***para una granja- carretera - carniceria carril izq vuelta a granja, carril dch ida a carniceria
+fmod CARRETERAS is
+pr NAT .
+pr CARRIL .
+sorts Carretera  Carreteras .
+subsort Carretera < Carreteras .
+
+op carrv : -> Carretera [ctor] .
+op [_|__|_] : Nat Carril Carril Nat -> Carretera [ctor ] .
+op /__/ : Carreteras Carreteras -> Carreteras [ctor assoc comm id: carrv ] .
+endfm
+
+
+
+***SISTEMA--------------------------------------------------------------------
+mod SISTEMA is 
+pr CARRETERAS .
+pr GRANJAS .
+pr CARNICERIAS .
+
+
+sort Sistema .
+vars carni carni' : Carnicerias .
+vars carre carre' : Carreteras .
+vars granj granj' : Granjas .
+vars carri carri' : Carril .
+vars clien clien' : Clientes .
+vars cc cva cc' cva' : Nat .
+vars  caVac caCer : Nat .
+var estado : Bool .
+var clientes : Clientes .
+var furgo : Furgoneta .
+var libreta : Conjunto .
+var estadof : String .
+vars idg gc gv idf fva fc idcar pv pc idcarant vacCom cerCom : Nat .
+var ped : Pedidos .
+
+
+op [_/_/_] : Carnicerias Granjas Carreteras -> Sistema .
+
+crl [cargarPedido] : [ carni /   [ idg ( idg idcarant | fva fc | estadof ) ( ( ( idcar pv pc ) ( ped ) ) ) | gc gv ] \ granj   / carre ]  
+    =>  [ carni /  [ idg ( idg idcar | ( fva + pv )  ( fc + pc ) | "REPARTO" ) ( ped ) | sd( gc, pc ) sd( gv, pv ) ] \ granj / carre ] 
+     if estadof == "ESPERANDO" /\ pv <= gv /\ pc <= gc .
+
+
+crl [incorporarCarrilIda] : [ carni /  ( [ idg ( idg idcar | fva fc | estadof ) ( ped )  | gc gv ] \ granj ) / /  carre ( [ idg | carri  carri' | idcar ] ) / ]    
+    => [ carni /  ( [  idg fv (  ( ped ) ) | gc gv ] \ granj )  / ( / carre ( [ idg | carri ( carri' / ( idg idcar | fva fc | estadof ) ) | idcar ] ) / ) ] 
+   if estadof == "REPARTO" .
+    
+rl [llegarCarniceria] : [ ( [ idcar estado /  caVac  caCer / clien fv  libreta ] ) | carni' /  granj  / ( / carre ( [ idg | carri ( ( ( idg idcar | fva fc | estadof ) ) /  carri' ) | idcar ]  ) / ) ] 
+             => [ [ idcar estado / caVac  caCer / clien ( idg idcar | fva fc | estadof )  libreta ] | carni' /  granj  / / carre ( [ idg | carri  carri' | idcar]  )  / ] .
+  
+crl [suministrarCarniceria] : [ ( [ idcar estado /  caVac  caCer / clien ( idg idcar | fva fc | estadof )   libreta ] ) | carni' / granj / carre ] =>
+ [ suministrar([ idcar estado /  caVac  caCer / clien ( idg idcar | fva fc | estadof )   libreta ]) | carni' / granj / carre ] 
+    if estadof == "REPARTO" .
+
+
+crl [incorporarCarrilVuelta] : [ [ idcar estado / caVac  caCer / clien ( idg idcar | fva fc | estadof )  libreta ] | carni' /  granj / ( / carre ( [ idg | ( carri ) carri' | idcar ] )  / ) ]  
+    => [ [ idcar estado / caVac  caCer / clien fv  libreta ] | carni' /  granj  / ( / carre ( [ idg | ( carri /  ( idg idcar | fva fc | estadof ) ) carri' | idcar ] )  / ) ]  
+    if  estadof == "VUELTA" .
+    
+crl [llegarGranja] : [ carni / ( [ idg fv ( ped ) | gc gv ] \ granj ) / ( / carre ( [ idg | ( ( idg idcar | fva fc | estadof ) / carri ) carri' | idcar ] ) / ) ] 
+ => [ carni / ([ idg ( idg idcar | fva fc | "ESPERANDO" ) ( ped )  | gc gv ] \ granj ) / / carre ( [ idg | carri  carri' | idcar ] )  / ] 
+    if estadof == "VUELTA"  .
+
+crl [atenderCliente] : [ [ idcar estado /  caVac  caCer / (  ( cva - cc ) // clien ) furgo  libreta ] | carni' / granj / carre ] => 
+    [ [ idcar estado /  sd( caVac , cva) sd( caCer , cc ) / clien furgo  libreta ] | carni' / granj / carre ] 
+    if estado /\ cva <= caVac /\ cc <= caCer  .
+
+rl [cerrar] : [ [ idcar true / caVac caCer / cliv  furgo  libreta ] | carni' / granj / carre ] => 
+[ [ idcar false /  caVac caCer / cliv furgo  libreta ] | carni' / granj / carre ] .
+
+rl [mePirom] : [ [ idcar true / caVac  caCer / ( ( ( cva - cc ) // ( cva' - cc' ) ) // clien' ) furgo  libreta ] | carni' / granj / carre ] => 
+[ [ idcar true / caVac  caCer / ( ( cva - cc ) // clien' ) furgo  libreta ] | carni' / granj / carre ] .
+
+
+***(
+ op Furgoneta1  : -> Furgoneta .
+ op Granja1  : -> Granjas .
+ op Carniceria1  : -> Carnicerias .
+ op Pedidos1  : -> Pedidos .
+ eq Furgoneta1 = 101 204 | 4 3 | "ESPERANDO" .
+ eq Pedidos1 = ( 204 7 6 ) ( 203 5 3 ) .
+ eq Granja1 = [ 101 Furgoneta1 Pedidos1 | 3 5 ] .
+
+ op Furgoneta2  : -> Furgoneta .
+ op Granja2  : -> Granjas .
+ op Carniceria2  : -> Carnicerias .
+ op Pedidos2  : -> Pedidos .
+ eq Furgoneta2 = 102 203 | 4 3 | "ESPERANDO" .
+ eq Pedidos2 = ( 203 1 0 ) ( 204 1 0 ) .
+ eq Granja2 = [ 102 Furgoneta2 Pedidos2 | 1 2 ] .
+
+***c
+ op Furgoneta3  : -> Furgoneta .
+ op Granja3  : -> Granjas .
+ op Carniceria3  : -> Carnicerias .
+ op Pedidos3  : -> Pedidos .
+ op ListaClientes3 : -> Clientes .
+ op ListaIDGranjas3 : -> Conjunto .
+ eq ListaClientes3 = ( 1 - 1 ) // ( 1 - 0 ) .
+ eq Furgoneta3 = fv .
+ eq ListaIDGranjas3 = ( 101 ; 102 ).
+ eq Carniceria3 = [203 true / 4 4 / cliv Furgoneta3 ListaIDGranjas3] .
+
+***d
+ op Carniceria4  : -> Carnicerias .
+ op Furgoneta4  : -> Furgoneta .
+ op ListaClientes4 : -> Clientes .
+ op ListaIDGranjas4 : -> Conjunto .
+ eq ListaClientes4 = ( 2 - 0 ).
+ eq Furgoneta4 = fv .
+ eq ListaIDGranjas4 = ( 101 ; 102 ).
+ eq Carniceria4 = [204 true / 0 0 / ListaClientes4 Furgoneta4 ListaIDGranjas4] .
+
+
+ ops Carretera1 Carretera2 Carretera3 Carretera4 : -> Carreteras .
+ eq Carretera1 = [ 101 | cv cv | 203 ] .
+ eq Carretera2 = [ 101 | cv cv | 204 ] .
+ eq Carretera3 = [ 102 | cv cv | 203 ] .
+ eq Carretera4 = [ 102 | cv cv | 204 ] .
+
+op Boss : -> Sistema .
+eq Boss = [ ( Carniceria3 | Carniceria4 ) / ( Granja1 \ Granja2 )  / ( / / Carretera1 Carretera2 / / Carretera3 Carretera4 / / ) ] .
+)
+
+
+endm
+
+
+
+mod PROPS is
+pr SISTEMA .
+pr SATISFACTION .
+
+subsort Sistema < State .
+vars carni carni' : Carnicerias .
+vars carre carre' : Carreteras .
+vars granj granj' : Granjas .
+vars carri carri' carril'' : Carril .
+vars clien clien' : Clientes .
+vars cc cva : Nat .
+vars  caVac caCer : Nat .
+var estado : Bool .
+var clientes : Clientes .
+var furgo : Furgoneta .
+var libreta : Conjunto .
+var estadof : String .
+vars idg gc gv idf fva fva' fc' fc idcar pv pc vacCom cerCom idpe numFur : Nat .
+var ped : Pedidos .
+
+op tieneSuministros : Nat Nat Nat -> Prop [ctor] .
+ceq [ [ idcar estado / caVac caCer / clien  furgo  libreta ] | carni' /  granj  / carre ] |= tieneSuministros( idcar , vacCom , cerCom )
+    = true 
+    if caCer >= cerCom  /\ caVac >= vacCom .
+
+op tienePedido :  Nat Nat -> Prop [ctor] .
+eq [ carni /  ( [ idg furgo ( ( idcar caVac caCer ) ped ) | gc gv ] \ granj )  / carre ] |= tienePedido( idcar , idg )
+    = true .
+
+op esperaPedido :  Nat Nat -> Prop [ctor] .
+eq [ ( [ idcar estado / caVac caCer / clien  furgo  ( idpe ; libreta ) ] | carni' ) /  granj  / carre ] |= esperaPedido( idcar , idpe )
+    = true .
+
+op abierta : Nat -> Prop [ctor] .
+eq [ [ idcar true / caVac caCer / clien  furgo  libreta ] | carni' /  granj  / carre ] |= abierta(idcar) = true .
+
+op cerrada : Nat -> Prop [ctor] .
+eq [ [ idcar false / caVac caCer / clien  furgo  libreta ] | carni' /  granj  / carre ] |= cerrada(idcar) = true .
+
+op tieneCliente : Nat -> Prop [ctor] .
+*** la magia está aquí ---------------------------------------------------------------------------------------------------------------
+ceq [ [ idcar estado / caVac caCer / clien  furgo  libreta ] | carni' /  granj  / carre ] |= tieneCliente(idcar) = true 
+if ( clien =/= cliv ) .
+
+eq sis:Sistema |= tieneCliente(idcar) = false [owise] .
+
+op hayFurgoneta : Nat -> Prop [ctor] .
+***caso furgo en carniceria
+eq [ [ idcar estado / caVac caCer / clien  ( idg idcar | fva fc | "REPARTO" )   libreta ] | carni' /  granj  / carre ] |= hayFurgoneta(idcar) = true .
+
+eq [ carni /  ( [ idg ( idg idcar | fva fc | "REPARTO" ) ( ped ) | gc gv ] \ granj )   / carre ] |= hayFurgoneta(idcar) = true .
+
+eq [ carni /  granj  / ( / carre ( [ idg | carri ( carri' / ( idg idcar | fva fc | "REPARTO" ) / carril'' ) | idcar ] ) / ) ] |= hayFurgoneta(idcar) = true .
+
+op hayfurgonetaEnGranja : Nat -> Prop [ctor] .
+eq [ carni /  ( [ idg ( idg idcar | fva fc | estadof ) ( ped ) | gc gv ] \ granj ) / carre ] |= hayfurgonetaEnGranja(idg) = true .
+
+op hayAtasco : -> Prop [ctor] .
+eq [ carni /  granj  / ( / carre ( [ idg | carri ( carri' / ( idg idcar | fva fc | estadof )  / ( idg idcar | fva' fc' | estadof )  / carril'' ) | idcar ] ) / ) ] |= hayAtasco = true .
+
+
+eq [ carni /  granj  / ( / carre ( [ idg | ( carri / ( idg idcar | fva fc | estadof )  / ( idg idcar | fva' fc' | estadof )  / carril'' )  carri' | idcar ] ) / ) ] |= hayAtasco = true .
+
+op hayExactamenteFurgonetas : Nat -> Prop [ctor] .
+op calcula : Granjas -> Nat . 
+op calcula1 : Carnicerias -> Nat . 
+op calcula2 : Carreteras -> Nat . 
+op calcula3 : Carril -> Nat .
+ceq [ carni /  granj  / carre ] |= hayExactamenteFurgonetas(numFur) = true
+if (calcula1(carni) + calcula(granj) + calcula2(carre) )== numFur .
+
+eq calcula( [ idg ( idg idcar | fva fc | estadof ) ( ped ) | gc gv ] \ granj ) = 1 + calcula(granj) .
+eq calcula( [ idg fv ( ped ) | gc gv ] \ granj ) = 1 + calcula(granj) .
+eq calcula( gvacia ) = 0  .
+
+eq calcula1( [ idcar estado / caVac caCer / clien ( idg idcar | fva fc | estadof ) libreta ] | carni') = 1 + calcula1(carni') .
+eq calcula1( [ idcar estado / caVac caCer / clien fv libreta ] | carni') = 0 + calcula1(carni') .
+eq calcula1( carv ) = 0 .
+
+eq calcula3( carri / ( idg idcar | fva fc | estadof ) ) = 1 + calcula3(carri) .
+eq calcula3( cv ) = 0 .
+
+eq calcula2( / carre ( [ idg | carri  carri' | idcar ] ) / ) = calcula3(carri) + calcula3(carri') + calcula2(carre) .
+eq calcula2( carrv ) = 0 .
+endm
+
+
+mod CHECK is
+  pr PROPS .
+  pr MODEL-CHECKER .
+  pr LTL-SIMPLIFIER .
+
+***d
+
+
+ op Carni1 : -> Carnicerias .
+ op Carni2 : -> Carnicerias .
+ op ListaClientes1 : -> Clientes .
+ op ListaClientes2 : -> Clientes .
+ op ListaIDGranjas1 : -> Conjunto .
+ op ListaIDGranjas2 : -> Conjunto .
+ op Ped : -> Pedidos .
+ op Furgoneta1  : -> Furgoneta .
+ op Furgoneta2  : -> Furgoneta .
+ op Granj2 : -> Granjas .
+ op Granj1  : -> Granjas .
+ op Ped1  : -> Pedidos .
+ op Ped2  : -> Pedidos .
+
+ 
+ eq Furgoneta1 = 101 201 | 0 0 | "ESPERANDO" .
+ eq Furgoneta2 = 102 201 | 0 0 | "ESPERANDO" .
+ ***vacas cerdos
+ eq Ped1 = ( 201 4 3 ) ( 202 4 3 ) .
+ eq Ped2 = ( 201 1 0 ) ( 202 1 0 ) .
+ eq ListaIDGranjas1 = ( 101 ; 102 ) .
+ eq ListaIDGranjas2 = ( 101 ; 102 ) .
+
+ eq ListaClientes1 = ( 1 - 1 ) // ( 1 - 0 ) .
+ eq ListaClientes2 = ( 2 - 0 ) .
+***cerdos  vacas
+ eq Granj1 = [ 101 Furgoneta1 Ped1 | 3 5 ] .
+ eq Granj2 = [ 102 Furgoneta2 Ped2 | 1 2 ] .
+
+ eq Carni1 = [ 201 true / 0 0 / ListaClientes1 fv ListaIDGranjas1] .
+ eq Carni2 = [ 202 true / 0 0 / ListaClientes2 fv ListaIDGranjas2] .
+
+ ops Carretera1 Carretera2 Carretera3 Carretera4 : -> Carreteras .
+ eq Carretera1 = [ 101 | cv cv | 201 ] .
+ eq Carretera2 = [ 101 | cv cv | 202 ] .
+ eq Carretera3 = [ 102 | cv cv | 201 ] .
+ eq Carretera4 = [ 102 | cv cv | 202 ] .
+
+
+
+
+
+
+
+op test : -> Sistema .
+eq test = [ Carni1 | Carni2 / ( Granj1 \ Granj2) / ( / ( / Carretera1 Carretera2 / ) (/ Carretera3 Carretera4 / ) / ) ] .
+
+endm
+***a
+***debido a que no hay suficientes recursos para suministrar a las dos carnicerias, una de elllas deja sin atender a su cliente, al ser el primero este no puede abandonar su lugar y la carniceria no puede cerrar nunca
+
+red modelCheck(test, <> [] cerrada(201)) . 
+red modelCheck(test, <> [] cerrada(202)) . 
+
+***b
+*** Si tengo suministros implica que he recibido una entrega y con ello será capaz de atender y cerrar
+red modelCheck(test, []( tieneCliente(201) /\ tieneSuministros(201, 1, 1)) -> <> cerrada(201)) . 
+red modelCheck(test, []( tieneCliente(202) /\ tieneSuministros(202, 2, 0)) -> <> cerrada(202)) .
+***c
+***no es posible que esten abiertas y cerradas a la vez
+red modelCheck(test,  [] ~( abierta(201) /\ cerrada(201) )) .
+red modelCheck(test,  [] ~( abierta(202) /\ cerrada(202) )) .
+***d
+***Debido a que una de las granjas no tiene para poder gestionar todos sus pedidos esas carnicerias no podran eliminar esos pedidos caso de la granjaga 201-101 y 202-101
+red modelCheck(test, [] (( esperaPedido(201,101) ) ->  <> ( ~ esperaPedido(201,101) )) ) .
+red modelCheck(test, [] (( esperaPedido(201,102) ) ->  <> ( ~ esperaPedido(201,102) )) ) .
+red modelCheck(test, [] (( esperaPedido(202,101) ) ->  <> ( ~ esperaPedido(202,101) )) ) .
+red modelCheck(test, [] (( esperaPedido(202,102) ) ->  <> ( ~ esperaPedido(202,102) )) ) .
+
+***e
+***Como las granjas tinen recursos para hacer como minimo un viaje, cada una en algun momento tendrá una forgoneta en camino
+red modelCheck(test, <> (( hayFurgoneta(201) ) )) .
+red modelCheck(test, <> (( hayFurgoneta(202) ) )) .
+
+***f
+*** al terminar de hacer los repartos o al no tener producto para continuar con los pedidos pendientes, las furgonetas permaneceran paradas
+red modelCheck(test, <> [] ( hayfurgonetaEnGranja(101) /\ hayfurgonetaEnGranja(102) ) ) .
+
+***g
+****en el momento que una carniceria no tenga clientes cierra
+red modelCheck(test,  []( ~ tieneCliente(201) -> <> cerrada(201))) .
+red modelCheck(test,  []( ~ tieneCliente(202) -> <> cerrada(202))) .
+
+***h
+*** en el caso dado no es posible generar atascos y al no encontrar contraejemplos lo considera verdadero
+red modelCheck(test, [] (hayAtasco -> <> ( ~ hayAtasco ) ) ) .
+
+***i
+***cuenta el numero de las furgonetas y coincide
+red modelCheck(test, <> [] hayExactamenteFurgonetas(2)) .
+ 
+***j
+*** en el caso dado no es posible generar atascos y al no encontrar contraejemplos lo considera verdadero
+red modelCheck(test, [] ( <> hayAtasco -> ~ ( hayfurgonetaEnGranja(101) /\ hayfurgonetaEnGranja(102)  ) )) .
+
+
+red [[201 false / 3 2 / cliv fv lv] | [
+    202 true / 0 0 / (2 - 0) fv (101 ; 102)] / [101 (101 201 | 0 0 | "ESPERANDO") (202 4 3) | 0 1] \ [102 (102 201 | 0 0 | "ESPERANDO") (202 1 0) | 1 1] / / [101 | cv cv | 201] / [101 | cv cv | 202] / [
+    102 | cv cv | 201] [102 | cv cv | 202] / / /] |= tieneCliente(202) .
